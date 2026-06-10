@@ -47,6 +47,15 @@ const DEFAULT_PROVIDER = { baseUrl: "https://api.mistral.ai/v1", apiKey: "", mod
 const TEXT_SEL = 'p[componentkey^="feed-commentary"], .feed-shared-inline-show-more-text';
 const TEXT_BOX_SEL = '[data-testid="expandable-text-box"]';
 
+/* ── Personality chips ────────────────────────────────────────────── */
+
+const PERSONALITIES = [
+  { id: "blunt", label: "Blunt" },
+  { id: "sarcastic", label: "Sarcastic" },
+  { id: "corporate", label: "Corporate" },
+  { id: "genz", label: "Gen Z" },
+];
+
 /* ── Rating color ───────────────────────────────────────────────────── */
 
 function ratingColor(score) {
@@ -67,9 +76,11 @@ function getPostText(textP) {
 
 function findActionBars() {
   const bars = new Set();
-  for (const el of document.querySelectorAll(
+  const selectors = [
+    'svg[id="comment-small"], svg[id="repost-small"], svg[id="send-privately-small"]',
     'use[href="#comment-small"], use[href="#repost-small"], use[href="#send-privately-small"]',
-  )) {
+  ];
+  for (const el of document.querySelectorAll(selectors.join(", "))) {
     const btn = el.closest("button");
     if (btn?.parentElement) bars.add(btn.parentElement);
   }
@@ -134,7 +145,7 @@ function stopDots(btn) {
 
 /* ── Render result ──────────────────────────────────────────────────── */
 
-function renderResult(post, textP, result, showUseful) {
+function renderResult(post, textP, result, showUseful, personality) {
   const {
     translated_post: translated,
     substance_rating: rating,
@@ -146,6 +157,7 @@ function renderResult(post, textP, result, showUseful) {
 
   const block = document.createElement("div");
   block.className = "lt-result-block";
+  block.dataset.ltPersonality = personality || "blunt";
 
   // Rating pill
   const ratingEl = document.createElement("div");
@@ -159,6 +171,19 @@ function renderResult(post, textP, result, showUseful) {
   postEl.className = "lt-translated-post";
   postEl.textContent = translated;
   block.appendChild(postEl);
+
+  // Personality chips
+  const chipsEl = document.createElement("div");
+  chipsEl.className = "lt-personality-chips";
+  for (const p of PERSONALITIES) {
+    const chip = document.createElement("button");
+    chip.className = "lt-personality-chip" + (p.id === personality ? " active" : "");
+    chip.dataset.personality = p.id;
+    chip.textContent = p.label;
+    chip.addEventListener("click", () => handlePersonalitySwitch(block, post, textP, p.id));
+    chipsEl.appendChild(chip);
+  }
+  block.appendChild(chipsEl);
 
   // Useful takeaways (if enabled in settings)
   if (showUseful && insights && insights.length > 0) {
@@ -195,6 +220,89 @@ function renderResult(post, textP, result, showUseful) {
   block.appendChild(toggle);
 
   textP.parentElement.insertBefore(block, textP.nextSibling);
+}
+
+/* ── Personality switch ────────────────────────────────────────────── */
+
+async function handlePersonalitySwitch(block, post, textP, newPersonality) {
+  if (block.dataset.ltPersonality === newPersonality) return;
+
+  // Update active chip
+  const chips = block.querySelectorAll(".lt-personality-chip");
+  for (const chip of chips) {
+    chip.classList.toggle("active", chip.dataset.personality === newPersonality);
+    chip.disabled = true;
+  }
+  block.dataset.ltPersonality = newPersonality;
+
+  // Show loading on translated post
+  const postEl = block.querySelector(".lt-translated-post");
+  if (postEl) {
+    postEl.dataset.ltOrigText = postEl.textContent;
+    postEl.textContent = "";
+    postEl.classList.add("lt-loading-text");
+  }
+
+  // Hide insights while loading
+  const insightsEl = block.querySelector(".lt-insights");
+  if (insightsEl) insightsEl.style.display = "none";
+
+  try {
+    const text = getPostText(textP);
+    const { ltProviders, ltActiveProvider } = await chrome.storage.local.get(["ltProviders", "ltActiveProvider"]);
+    const provider = ltProviders?.find((p) => p.id === ltActiveProvider) || DEFAULT_PROVIDER;
+    const { ltShowUseful } = await chrome.storage.local.get("ltShowUseful");
+    const showUseful = ltShowUseful !== false;
+
+    const response = await chrome.runtime.sendMessage({
+      type: "analyzePost",
+      provider,
+      text,
+      showUseful,
+      personality: newPersonality,
+    });
+
+    if (!response.success) throw new Error(response.error);
+
+    const { translated_post, substance_rating, useful_things } = response.result;
+
+    // Update rating
+    const ratingEl = block.querySelector(".lt-rating");
+    if (ratingEl) {
+      ratingEl.style.color = ratingColor(substance_rating);
+      ratingEl.innerHTML = `<span class="lt-rating-dot" style="background:${ratingColor(substance_rating)}"></span>${substance_rating}/10 substance score`;
+    }
+
+    // Update translated post
+    if (postEl) {
+      postEl.classList.remove("lt-loading-text");
+      postEl.textContent = translated_post;
+    }
+
+    // Update insights
+    if (showUseful && insightsEl && useful_things && useful_things.length > 0) {
+      const list = insightsEl.querySelector(".lt-insights-list");
+      if (list) {
+        list.innerHTML = "";
+        for (const item of useful_things) {
+          const li = document.createElement("li");
+          li.textContent = item;
+          list.appendChild(li);
+        }
+      }
+      insightsEl.style.display = "";
+    } else if (insightsEl) {
+      insightsEl.style.display = "none";
+    }
+  } catch (e) {
+    console.error("[LT] Personality switch error:", e.message);
+    if (postEl) {
+      postEl.classList.remove("lt-loading-text");
+      postEl.textContent = postEl.dataset.ltOrigText || "Error switching personality.";
+    }
+  } finally {
+    for (const chip of chips) chip.disabled = false;
+  }
 }
 
 /* ── Inline API key prompt ──────────────────────────────────────────── */
@@ -270,7 +378,7 @@ async function handleUnfilter(btn, post, actionBar, text) {
       await cacheSet(text, result);
     }
     const textP = post.querySelector(TEXT_SEL);
-    if (textP) renderResult(post, textP, result, showUseful);
+    if (textP) renderResult(post, textP, result, showUseful, personality);
     stopDots(btn);
     btn.innerHTML = `${ICON_SVG}<span>Done</span>`;
     btn.classList.add("done");
@@ -342,6 +450,7 @@ function updateTheme() {
     document.body.classList.contains("theme--dark") ||
     document.body.getAttribute("data-theme") === "dark" ||
     document.body.getAttribute("data-color-scheme") === "dark" ||
+    document.documentElement.classList.contains("theme--dark") ||
     document.documentElement.getAttribute("data-theme") === "dark" ||
     document.documentElement.getAttribute("data-color-scheme") === "dark";
   document.documentElement.setAttribute("data-lt-theme", isDark ? "dark" : "light");
@@ -354,7 +463,7 @@ function startThemeObserver() {
   const bodyObserver = new MutationObserver(updateTheme);
   bodyObserver.observe(document.body, { attributes: true, attributeFilter: ["class", "data-theme", "data-color-scheme"] });
   const docObserver = new MutationObserver(updateTheme);
-  docObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  docObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme", "data-color-scheme"] });
 }
 
 /* ── Auto-analyze (dwell 5s) ─────────────────────────────────────────── */

@@ -20,8 +20,7 @@
   --lt-toggle-knob: white;
 }
 
-html[data-lt-theme="dark"],
-html[data-lt-theme="dark"] body {
+[data-lt-theme="dark"] {
   --lt-text: rgba(255, 255, 255, 0.95);
   --lt-text-secondary: rgba(255, 255, 255, 0.7);
   --lt-text-muted: rgba(255, 255, 255, 0.45);
@@ -89,16 +88,6 @@ html[data-lt-theme="dark"] body {
 .lt-unfilter-btn:focus-visible {
   outline: 2px solid var(--lt-accent);
   outline-offset: 2px;
-}
-
-html[data-lt-theme="dark"] .lt-unfilter-btn {
-  background: transparent;
-  color: var(--lt-text-secondary);
-}
-
-html[data-lt-theme="dark"] .lt-unfilter-btn:hover {
-  background: var(--lt-bg-hover);
-  color: var(--lt-text);
 }
 
 .lt-unfilter-btn.loading {
@@ -282,6 +271,11 @@ html[data-lt-theme="dark"] .lt-unfilter-btn:hover {
   animation: lt-fade-in 0.4s ease-out 0.1s both;
 }
 
+.lt-translated-post.lt-loading-text {
+  color: var(--lt-text-muted);
+  animation: lt-pulse 1.2s ease-in-out infinite;
+}
+
 /* ── Useful takeaways ──────────────────────────────────────────────── */
 
 .lt-insights {
@@ -453,6 +447,61 @@ html[data-lt-theme="dark"] .lt-unfilter-btn:hover {
   animation: lt-fade-in 0.2s ease-out;
 }
 
+/* ── Personality chips ─────────────────────────────────────────────── */
+
+.lt-personality-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  margin-bottom: 12px;
+  animation: lt-fade-in 0.35s ease-out 0.15s both;
+}
+
+.lt-personality-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--lt-border-hover);
+  border-radius: 12px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--lt-text-secondary);
+  cursor: pointer;
+  transition:
+    background 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lt-personality-chip:hover {
+  background: var(--lt-bg-hover);
+  color: var(--lt-text);
+}
+
+.lt-personality-chip.active {
+  background: var(--lt-accent);
+  border-color: var(--lt-accent);
+  color: #fff;
+}
+
+.lt-personality-chip.active:hover {
+  background: var(--lt-accent-hover);
+  border-color: var(--lt-accent-hover);
+}
+
+.lt-personality-chip:focus-visible {
+  outline: 2px solid var(--lt-accent);
+  outline-offset: 2px;
+}
+
+.lt-personality-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* ── Reduced motion ─────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -462,7 +511,8 @@ html[data-lt-theme="dark"] .lt-unfilter-btn:hover {
   .lt-insights,
   .lt-insights-list li,
   .lt-inline-prompt,
-  .lt-error {
+  .lt-error,
+  .lt-personality-chips {
     animation: none;
   }
   .lt-unfilter-btn.loading svg {
