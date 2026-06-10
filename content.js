@@ -13,9 +13,13 @@ function normalizeForCache(s) {
   return s.replace(/\s+/g, " ").toLowerCase().trim();
 }
 
+function getCacheKey(text) {
+  return hashText(normalizeForCache(text));
+}
+
 async function cacheGet(text) {
   try {
-    const key = hashText(normalizeForCache(text));
+    const key = getCacheKey(text);
     const data = await chrome.storage.local.get(CACHE_NS);
     return data[CACHE_NS]?.[key] || null;
   } catch (e) {
@@ -26,7 +30,7 @@ async function cacheGet(text) {
 
 async function cacheSet(text, result) {
   try {
-    const key = hashText(normalizeForCache(text));
+    const key = getCacheKey(text);
     const data = await chrome.storage.local.get(CACHE_NS);
     const cache = data[CACHE_NS] || {};
     cache[key] = { ...result, cachedAt: Date.now() };
@@ -47,6 +51,21 @@ const DEFAULT_PROVIDER = { baseUrl: "https://api.mistral.ai/v1", apiKey: "", mod
 const TEXT_SEL = 'p[componentkey^="feed-commentary"], .feed-shared-inline-show-more-text';
 const TEXT_BOX_SEL = '[data-testid="expandable-text-box"]';
 
+/* ── API helpers ──────────────────────────────────────────────────────── */
+
+async function getActiveProvider() {
+  const { ltProviders, ltActiveProvider } = await chrome.storage.local.get(["ltProviders", "ltActiveProvider"]);
+  return ltProviders?.find((p) => p.id === ltActiveProvider) || DEFAULT_PROVIDER;
+}
+
+async function fetchAnalysis(provider, text, showUseful, personality) {
+  const response = await chrome.runtime.sendMessage({
+    type: "analyzePost", provider, text, showUseful, personality
+  });
+  if (!response.success) throw new Error(response.error);
+  return response.result;
+}
+
 /* ── Personality chips ────────────────────────────────────────────── */
 
 const PERSONALITIES = [
@@ -64,6 +83,23 @@ function ratingColor(score) {
   if (score <= 6) return "#f9a825";
   if (score <= 8) return "#1b7d3a";
   return "#0a66c2";
+}
+
+function updateRatingEl(ratingEl, rating) {
+  if (!ratingEl) return;
+  const color = ratingColor(rating);
+  ratingEl.style.color = color;
+  ratingEl.innerHTML = `<span class="lt-rating-dot" style="background:${color}"></span>${rating}/10 substance score`;
+}
+
+function populateInsightsList(listEl, insights) {
+  if (!listEl) return;
+  listEl.innerHTML = "";
+  for (const item of insights) {
+    const li = document.createElement("li");
+    li.textContent = item;
+    listEl.appendChild(li);
+  }
 }
 
 /* ── DOM helpers ────────────────────────────────────────────────────── */
@@ -143,6 +179,20 @@ function stopDots(btn) {
   }
 }
 
+function setButtonLoading(btn) {
+  btn.innerHTML = `${ICON_SVG}<span></span>`;
+  btn.classList.add("loading");
+  btn.classList.remove("done", "pending");
+  startDots(btn);
+}
+
+function setButtonComplete(btn, text = "Done", className = "done") {
+  stopDots(btn);
+  btn.innerHTML = `${ICON_SVG}<span>${text}</span>`;
+  btn.classList.remove("loading", "pending");
+  if (className) btn.classList.add(className);
+}
+
 /* ── Render result ──────────────────────────────────────────────────── */
 
 function renderResult(post, textP, result, showUseful, personality) {
@@ -162,8 +212,7 @@ function renderResult(post, textP, result, showUseful, personality) {
   // Rating pill
   const ratingEl = document.createElement("div");
   ratingEl.className = "lt-rating";
-  ratingEl.style.color = ratingColor(rating);
-  ratingEl.innerHTML = `<span class="lt-rating-dot" style="background:${ratingColor(rating)}"></span>${rating}/10 substance score`;
+  updateRatingEl(ratingEl, rating);
   block.appendChild(ratingEl);
 
   // Translated post
@@ -195,11 +244,7 @@ function renderResult(post, textP, result, showUseful, personality) {
     insightsEl.appendChild(insightsTitle);
     const insightsList = document.createElement("ul");
     insightsList.className = "lt-insights-list";
-    for (const item of insights) {
-      const li = document.createElement("li");
-      li.textContent = item;
-      insightsList.appendChild(li);
-    }
+    populateInsightsList(insightsList, insights);
     insightsEl.appendChild(insightsList);
     block.appendChild(insightsEl);
   }
@@ -249,29 +294,15 @@ async function handlePersonalitySwitch(block, post, textP, newPersonality) {
 
   try {
     const text = getPostText(textP);
-    const { ltProviders, ltActiveProvider } = await chrome.storage.local.get(["ltProviders", "ltActiveProvider"]);
-    const provider = ltProviders?.find((p) => p.id === ltActiveProvider) || DEFAULT_PROVIDER;
     const { ltShowUseful } = await chrome.storage.local.get("ltShowUseful");
     const showUseful = ltShowUseful !== false;
+    const provider = await getActiveProvider();
 
-    const response = await chrome.runtime.sendMessage({
-      type: "analyzePost",
-      provider,
-      text,
-      showUseful,
-      personality: newPersonality,
-    });
-
-    if (!response.success) throw new Error(response.error);
-
-    const { translated_post, substance_rating, useful_things } = response.result;
+    const { translated_post, substance_rating, useful_things } = await fetchAnalysis(provider, text, showUseful, newPersonality);
 
     // Update rating
     const ratingEl = block.querySelector(".lt-rating");
-    if (ratingEl) {
-      ratingEl.style.color = ratingColor(substance_rating);
-      ratingEl.innerHTML = `<span class="lt-rating-dot" style="background:${ratingColor(substance_rating)}"></span>${substance_rating}/10 substance score`;
-    }
+    updateRatingEl(ratingEl, substance_rating);
 
     // Update translated post
     if (postEl) {
@@ -282,14 +313,7 @@ async function handlePersonalitySwitch(block, post, textP, newPersonality) {
     // Update insights
     if (showUseful && insightsEl && useful_things && useful_things.length > 0) {
       const list = insightsEl.querySelector(".lt-insights-list");
-      if (list) {
-        list.innerHTML = "";
-        for (const item of useful_things) {
-          const li = document.createElement("li");
-          li.textContent = item;
-          list.appendChild(li);
-        }
-      }
+      populateInsightsList(list, useful_things);
       insightsEl.style.display = "";
     } else if (insightsEl) {
       insightsEl.style.display = "none";
@@ -324,14 +348,11 @@ function showInlinePrompt(post, actionBar, btn, text) {
   saveBtn.addEventListener("click", async () => {
     const key = input.value.trim();
     if (!key) return;
-    // Save key to the active provider
     const { ltProviders, ltActiveProvider } = await chrome.storage.local.get(["ltProviders", "ltActiveProvider"]);
     if (ltProviders) {
       const p = ltProviders.find((x) => x.id === ltActiveProvider);
-      if (p) {
-        p.apiKey = key;
-        await chrome.storage.local.set({ ltProviders });
-      }
+      if (p) p.apiKey = key;
+      await chrome.storage.local.set({ ltProviders });
     }
     wrap.remove();
     btn.click();
@@ -349,8 +370,7 @@ function showInlinePrompt(post, actionBar, btn, text) {
 async function handleUnfilter(btn, post, actionBar, text) {
   const fix = anchorScroll(btn);
 
-  const { ltProviders, ltActiveProvider } = await chrome.storage.local.get(["ltProviders", "ltActiveProvider"]);
-  let provider = ltProviders?.find((p) => p.id === ltActiveProvider) || DEFAULT_PROVIDER;
+  const provider = await getActiveProvider();
 
   if (!provider.apiKey) {
     stopDots(btn);
@@ -366,22 +386,12 @@ async function handleUnfilter(btn, post, actionBar, text) {
     const personality = ltPersonality || "blunt";
     let result = await cacheGet(text);
     if (!result) {
-      const response = await chrome.runtime.sendMessage({
-        type: "analyzePost",
-        provider,
-        text,
-        showUseful,
-        personality
-      });
-      if (!response.success) throw new Error(response.error);
-      result = response.result;
+      result = await fetchAnalysis(provider, text, showUseful, personality);
       await cacheSet(text, result);
     }
     const textP = post.querySelector(TEXT_SEL);
     if (textP) renderResult(post, textP, result, showUseful, personality);
-    stopDots(btn);
-    btn.innerHTML = `${ICON_SVG}<span>Done</span>`;
-    btn.classList.add("done");
+    setButtonComplete(btn);
     requestAnimationFrame(fix);
   } catch (e) {
     console.error("[LT] handleUnfilter ERROR:", e.message);
@@ -417,11 +427,9 @@ function injectButton(actionBar, post) {
     "click",
     (e) => {
       e.stopPropagation();
-      btn.innerHTML = `${ICON_SVG}<span></span>`;
-      btn.classList.add("loading");
-      startDots(btn);
       const text = getPostText(textP);
       if (!text) return;
+      setButtonLoading(btn);
       handleUnfilter(btn, post, actionBar, text);
     },
     true,
@@ -458,12 +466,13 @@ function updateTheme() {
 
 function startThemeObserver() {
   updateTheme();
-  const mq = window.matchMedia("(prefers-color-scheme: dark)");
-  mq.addEventListener("change", updateTheme);
-  const bodyObserver = new MutationObserver(updateTheme);
-  bodyObserver.observe(document.body, { attributes: true, attributeFilter: ["class", "data-theme", "data-color-scheme"] });
-  const docObserver = new MutationObserver(updateTheme);
-  docObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme", "data-color-scheme"] });
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateTheme);
+
+  const observer = new MutationObserver(updateTheme);
+  const config = { attributes: true, attributeFilter: ["class", "data-theme", "data-color-scheme"] };
+
+  observer.observe(document.body, config);
+  observer.observe(document.documentElement, config);
 }
 
 /* ── Auto-analyze (dwell 5s) ─────────────────────────────────────────── */
@@ -549,12 +558,10 @@ async function startDwell(btn, post, actionBar, textP) {
     dwellTimers.delete(btn);
     removePending(btn);
     if (!canAutoTranslate(btn, post)) return;
-    autoAnalyzeCount++;
-    btn.innerHTML = `${ICON_SVG}<span></span>`;
-    btn.classList.add("loading");
-    startDots(btn);
     const text = getPostText(textP);
     if (!text) return;
+    autoAnalyzeCount++;
+    setButtonLoading(btn);
     handleUnfilter(btn, post, actionBar, text).finally(() => {
       autoAnalyzeCount--;
     });

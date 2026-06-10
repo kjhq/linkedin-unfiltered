@@ -1,6 +1,10 @@
 /* ── Config ─────────────────────────────────────────────────────────── */
 
-const DEFAULT_PROVIDER = { baseUrl: "https://api.mistral.ai/v1", apiKey: "", model: "mistral-small-latest" };
+const DEFAULT_PROVIDER = {
+  baseUrl: "https://api.mistral.ai/v1",
+  apiKey: "",
+  model: "mistral-small-latest",
+};
 
 /* ── System prompt ──────────────────────────────────────────────────── */
 
@@ -84,7 +88,7 @@ You are a LinkedIn Unfiltered analyst. Output ONLY a JSON object translating Lin
 - 3-4: Minimal. A tiny kernel of truth deeply buried in performance.
 - 5-6: Decent. Real content mixed with LinkedIn-ese.
 - 7-8: Good. Useful/impressive, slightly dramatized.
-- 9-10: Genuine. Real insight/achievement, zero performance.`
+- 9-10: Genuine. Real insight/achievement, zero performance.`,
   },
 
   sarcastic: {
@@ -169,7 +173,7 @@ You are the friend who's exhausted by LinkedIn but can't stop scrolling. Your sa
 - 3-4: Minimal truth buried under performance.
 - 5-6: Decent. Real content, some LinkedIn-ese.
 - 7-8: Good. Genuinely useful, slightly dramatized.
-- 9-10: Genuine. Real insight, zero performance.`
+- 9-10: Genuine. Real insight, zero performance.`,
   },
 
   corporate: {
@@ -251,7 +255,7 @@ You translate everything into exaggerated, buzzword-heavy corporate speak. The h
 - 3-4: Minimal. A kernel buried in performance.
 - 5-6: Decent. Real content, some LinkedIn-ese.
 - 7-8: Good. Useful content, slightly dramatized.
-- 9-10: Genuine. Real insight, zero performance.`
+- 9-10: Genuine. Real insight, zero performance.`,
   },
 
   genz: {
@@ -332,58 +336,9 @@ Deploy as needed: bestie, slay, no cap, it's giving, not the [thing] 💀, iktr,
 - 3-4: Minimal. A kernel buried in performance.
 - 5-6: Decent. Real content mixed with LinkedIn-ese.
 - 7-8: Good. Genuinely useful, slightly dramatized.
-- 9-10: Genuine. Real insight, zero performance.`
-  }
+- 9-10: Genuine. Real insight, zero performance.`,
+  },
 };
-
-/* ── Legacy prompts ──────────────────────────────────────────────────── */
-
-const SYSTEM_PROMPT = `
-You are a LinkedIn Unfiltered analyst. Output ONLY a JSON object translating LinkedIn posts into honest, no-BS text. If the input is not in English, translate it to English first.
-
-## JSON Format
-{
-  "translated_post": "string (1-4 sentences, first-person, blunt/honest version of the post)",
-  "substance_rating": "integer (0-10)",
-  "useful_things": ["array of strings (specific useful takeaways/data; empty array if none)"]
-}
-
-## Internal Logic (Do Not Output)
-1. Strip all performative language, humble-bragging, and engagement bait.
-2. Separate sincere content from theater. 
-3. Evaluate the substance level to determine the translation tone.
-4. Draft a first-person, 1-4 sentence honest translation.
-
-## Translation Voice & Dynamic Tone
-- **Substance Rating 5-10 (Decent to Genuine):** Write in 1st person, sounding like the author talking honestly to a friend over a drink. Let the real value or hard work shine through without the corporate fluff.
-- **Substance Rating 0-4 (High BS / Empty):** Pivot the tone to be **humorous and satirical**. Make fun of the post's emptiness *from the author's own perspective*, making them sound hilariously self-aware of their own performance.
-
-## Constraints & Rules
-- Write in 1st person ("I", "my"). No monologues; keep it to 1-4 sentences.
-- Never hallucinate entirely new context; mock or translate *only* using details present in the input.
-- Critique the corporate performance and post style, not the human's personal character.
-- When in doubt, prioritize blunt, funny clarity.
-
-## Examples of the Voice Shift
-
-**Example 1: High BS (Substance 0-4) -> Humorous Self-Mockery**
-- *Input:* "Here's my unpopular hot take on why most startups fail to scale... [10 paragraph essay of obvious tips]"
-- *Translation:* "I'm going to state something completely obvious and frame it like a profound revelation because my personal brand is starving and I desperately need notifications today."
-
-**Example 2: Overdramatized Routine (Substance 0-4) -> Satirical Truth**
-- *Input:* "Just wrapped up an incredible session with the team. The synergy was unmatched. So proud of what we're building together."
-- *Translation:* "We had a completely mundane, mandatory team meeting where everyone just stared at the clock. Nothing went wrong, which apparently qualifies as an earth-shattering triumph in my mind."
-
-**Example 3: Actual Value (Substance 5-10) -> Honest and Fair**
-- *Input:* "I'm beyond humbled and grateful for the overwhelming support on this journey. We just hit $10k MRR after months of sleepless nights! 🙏"
-- *Translation:* "I worked incredibly hard on this launch and people are actually paying for it. It's a huge relief and it feels amazing."
-
-## Substance Rating Scale
-- 0-2: Empty. Platitudes, word salad, or pure bait. (Trigger humorous mockery)
-- 3-4: Minimal. A tiny kernel of truth deeply buried in performance. (Trigger humorous mockery)
-- 5-6: Decent. Real content mixed with LinkedIn-ese. (Balanced translation)
-- 7-8: Good. Useful/impressive, slightly dramatized. (Positive, honest translation)
-- 9-10: Genuine. Real insight/achievement, zero performance. (Direct translation)`;
 
 /* ── JSON schema for structured output ──────────────────────────────── */
 
@@ -399,29 +354,30 @@ const RESPONSE_SCHEMA = {
       description: "How much actual useful content is here, 0-10",
     },
     useful_things: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Specific useful takeaways or real information from the post'
-    }
+      type: "array",
+      items: { type: "string" },
+      description:
+        "Specific useful takeaways or real information from the post",
+    },
   },
-  required: ['translated_post', 'substance_rating', 'useful_things'],
-  additionalProperties: false
+  required: ["translated_post", "substance_rating", "useful_things"],
+  additionalProperties: false,
 };
 
 const RESPONSE_SCHEMA_SIMPLE = {
-  type: 'object',
+  type: "object",
   properties: {
     translated_post: {
-      type: 'string',
-      description: 'First-person honest version of the post, 1-4 sentences'
+      type: "string",
+      description: "First-person honest version of the post, 1-4 sentences",
     },
     substance_rating: {
-      type: 'integer',
-      description: 'How much actual useful content is here, 0-10'
-    }
+      type: "integer",
+      description: "How much actual useful content is here, 0-10",
+    },
   },
-  required: ['translated_post', 'substance_rating'],
-  additionalProperties: false
+  required: ["translated_post", "substance_rating"],
+  additionalProperties: false,
 };
 
 /* ── Retry logic ────────────────────────────────────────────────────── */
@@ -444,12 +400,18 @@ async function fetchWithRetry(url, options, signal, onRetry) {
       let waitMs;
       if (lastRes.status === 429) {
         const retryAfter = lastRes.headers.get("retry-after");
-        waitMs = retryAfter ? parseInt(retryAfter) * 1000 : RETRY_DELAYS[attempt];
+        waitMs = retryAfter
+          ? parseInt(retryAfter) * 1000
+          : RETRY_DELAYS[attempt];
         waitMs = Math.min(waitMs, 30000);
       } else {
         waitMs = RETRY_DELAYS[attempt];
       }
-      if (onRetry) onRetry(attempt + 1, lastRes.status === 429 ? "Rate limited" : "Retrying");
+      if (onRetry)
+        onRetry(
+          attempt + 1,
+          lastRes.status === 429 ? "Rate limited" : "Retrying",
+        );
       await new Promise((r) => setTimeout(r, waitMs));
     }
   }
@@ -490,31 +452,47 @@ async function analyzePost(provider, text, showUseful, personality, onRetry) {
         },
       },
     };
-    const res = await fetchWithRetry(apiUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    }, controller.signal, onRetry);
+    const res = await fetchWithRetry(
+      apiUrl,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      },
+      controller.signal,
+      onRetry,
+    );
 
     if (!res.ok) {
       const err = await res.text();
       console.error("[LT BG] API error:", res.status, err);
 
       if (res.status === 400) {
-        throw new Error(`This model doesn't support structured output. Try a different model or provider.`);
+        throw new Error(
+          `This model doesn't support structured output. Try a different model or provider.`,
+        );
       }
       if (res.status === 401 || res.status === 403) {
-        throw new Error(`Invalid API key. Check your key in the extension settings.`);
+        throw new Error(
+          `Invalid API key. Check your key in the extension settings.`,
+        );
       }
       if (res.status === 429) {
-        throw new Error(`Rate limited. Wait a moment and try again, or switch to a different provider.`);
+        throw new Error(
+          `Rate limited. Wait a moment and try again, or switch to a different provider.`,
+        );
       }
-      throw new Error(`API ${res.status}: ${err.slice(0, 200)}. Try a different model or provider.`);
+      throw new Error(
+        `API ${res.status}: ${err.slice(0, 200)}. Try a different model or provider.`,
+      );
     }
 
     const data = await res.json();
     const content = data?.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Empty response from model. Try a different model or provider.");
+    if (!content)
+      throw new Error(
+        "Empty response from model. Try a different model or provider.",
+      );
 
     return JSON.parse(content);
   } catch (e) {
@@ -534,7 +512,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   const onRetry = (attempt, label) => {
     if (tabId) {
-      chrome.tabs.sendMessage(tabId, { type: "retryProgress", attempt, label }).catch(() => {});
+      chrome.tabs
+        .sendMessage(tabId, { type: "retryProgress", attempt, label })
+        .catch(() => {});
     }
   };
 
