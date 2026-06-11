@@ -118,7 +118,9 @@ function findActionBars() {
   ];
   for (const el of document.querySelectorAll(selectors.join(", "))) {
     const btn = el.closest("button");
-    if (btn?.parentElement) bars.add(btn.parentElement);
+    if (!btn) continue;
+    const bar = btn.closest('.feed-shared-social-action-bar') || btn.parentElement;
+    if (bar) bars.add(bar);
   }
   return [...bars];
 }
@@ -130,6 +132,31 @@ function findPostCard(bar) {
     el = el.parentElement;
   }
   return null;
+}
+
+function findPostContainers() {
+  const posts = [];
+  const textElements = document.querySelectorAll(TEXT_SEL);
+
+  for (const textEl of textElements) {
+    let postCard = textEl.closest('[role="article"], [data-urn], .feed-shared-update-v2, [role="listitem"]');
+    if (!postCard) continue;
+
+    if (postCard.querySelector(".lt-unfilter-btn")) continue;
+    if (postCard.querySelector(".lt-result-block")) continue;
+
+    const actionBar = postCard.querySelector(
+      '.feed-shared-social-action-bar,' +
+        'div[class*="social-action-bar"],' +
+        'div[class*="social-action"]'
+    );
+
+    if (actionBar) {
+      posts.push({ postCard, actionBar, textElement: textEl });
+    }
+  }
+
+  return posts;
 }
 
 /* ── Scroll anchoring ───────────────────────────────────────────────── */
@@ -444,9 +471,15 @@ function injectButton(actionBar, post) {
 /* ── Feed scanner ───────────────────────────────────────────────────── */
 
 function scanFeed() {
+  // Method 1: Bottom-up (finds action bars by SVG icons, walks up to post)
   for (const bar of findActionBars()) {
     const post = findPostCard(bar);
     if (post) injectButton(bar, post);
+  }
+
+  // Method 2: Top-down (finds text elements, walks up to post, finds action bar)
+  for (const { postCard, actionBar } of findPostContainers()) {
+    injectButton(actionBar, postCard);
   }
 }
 
@@ -588,9 +621,21 @@ async function loadAutoAnalyzeSetting() {
 
 function scanForAutoTranslate() {
   if (!autoAnalyzeEnabled || !autoObserver) return;
+  const allPosts = new Set();
+
+  // Collect posts from bottom-up method
   for (const bar of findActionBars()) {
     const post = findPostCard(bar);
-    if (post && !post.hasAttribute("data-lt-auto-observed")) {
+    if (post) allPosts.add(post);
+  }
+
+  // Collect posts from top-down method
+  for (const { postCard } of findPostContainers()) {
+    allPosts.add(postCard);
+  }
+
+  for (const post of allPosts) {
+    if (!post.hasAttribute("data-lt-auto-observed")) {
       post.setAttribute("data-lt-auto-observed", "true");
       autoObserver.observe(post);
     }

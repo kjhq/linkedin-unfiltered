@@ -1,0 +1,17 @@
+# Development artifacts
+index.html
+profile.html
+*.zip
+.DS_Store
+
+# Node modules if you add them later
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+*.swp
+*.swo
+*~
