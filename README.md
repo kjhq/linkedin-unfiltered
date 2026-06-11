@@ -21,9 +21,11 @@ features:
 
 ---
 
-### screenshot
+### in action
 
-*(add a gif or screenshot here showing the extension in action)*
+| before | after |
+|--------|-------|
+| ![before](screenshots/screenshot-1.png) | ![after](screenshots/screenshot-2.png) |
 
 ---
 

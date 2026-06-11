@@ -12,6 +12,7 @@ node_modules/
 .idea/
 
 # OS
-*.swp
-*.swo
-*~
+Thumbs.db
+
+# Logs
+*.log
