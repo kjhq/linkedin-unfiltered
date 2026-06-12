@@ -31,14 +31,13 @@ features:
 
 ### install
 
-**chrome web store** *(coming soon)*
+**firefox** → [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/linkedin-unfiltered/)
 
-**manual load**
-1. download the [latest release](https://github.com/kjhq/linkedin-unfiltered/releases)
-2. open `chrome://extensions`
-3. enable **developer mode**
-4. click **load unpacked** → select the folder
-5. go to [linkedin.com](https://linkedin.com), find a post, click **unfilter**
+**chrome** → download the `chrome.zip` from the [latest release](https://github.com/kjhq/linkedin-unfiltered/releases), then:
+
+1. open `chrome://extensions`
+2. enable **developer mode**
+3. drag `chrome.zip` onto the page
 
 ---
 
