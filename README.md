@@ -31,7 +31,7 @@ features:
 
 ### install
 
-**firefox** → [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/linkedin-unfiltered/)
+**firefox** → [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/linkedin-unfiltered/) (**currently undergoing approval**)
 
 **chrome** → download the `chrome.zip` from the [latest release](https://github.com/kjhq/linkedin-unfiltered/releases), then:
 
