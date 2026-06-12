@@ -1,6 +1,6 @@
 /* ── Cache ──────────────────────────────────────────────────────────── */
 
-const CACHE_NS = "ltCache";
+const CACHE_NS = "luCache";
 const CACHE_MAX = 500;
 
 function hashText(s) {
@@ -54,8 +54,8 @@ const TEXT_BOX_SEL = '[data-testid="expandable-text-box"]';
 /* ── API helpers ──────────────────────────────────────────────────────── */
 
 async function getActiveProvider() {
-  const { ltProviders, ltActiveProvider } = await chrome.storage.local.get(["ltProviders", "ltActiveProvider"]);
-  return ltProviders?.find((p) => p.id === ltActiveProvider) || DEFAULT_PROVIDER;
+  const { luProviders, luActiveProvider } = await chrome.storage.local.get(["luProviders", "luActiveProvider"]);
+  return luProviders?.find((p) => p.id === luActiveProvider) || DEFAULT_PROVIDER;
 }
 
 async function fetchAnalysis(provider, text, showUseful, personality) {
@@ -151,7 +151,7 @@ const ICON_SVG = `<svg width="20" height="20" viewBox="0 0 16 16" fill="none" xm
 
 /* ── Animated dots ──────────────────────────────────────────────────── */
 
-const dotsIntervals = new Map();
+const dotsTimers = new Map();
 
 function startDots(btn) {
   stopDots(btn);
@@ -168,16 +168,16 @@ function startDots(btn) {
     else if (elapsed < 8000) delay = Math.min(500, delay + 30);
     else delay = Math.max(180, delay - 40);
     const id = setTimeout(step, delay);
-    dotsIntervals.set(btn, id);
+    dotsTimers.set(btn, id);
   };
   step();
 }
 
 function stopDots(btn) {
-  const id = dotsIntervals.get(btn);
+  const id = dotsTimers.get(btn);
   if (id) {
     clearTimeout(id);
-    dotsIntervals.delete(btn);
+    dotsTimers.delete(btn);
   }
 }
 
@@ -209,7 +209,7 @@ function renderResult(post, textP, result, showUseful, personality) {
 
   const block = document.createElement("div");
   block.className = "lt-result-block";
-  block.dataset.ltPersonality = personality || "blunt";
+  block.dataset.luPersonality = personality || "blunt";
 
   // Rating pill
   const ratingEl = document.createElement("div");
@@ -272,7 +272,7 @@ function renderResult(post, textP, result, showUseful, personality) {
 /* ── Personality switch ────────────────────────────────────────────── */
 
 async function handlePersonalitySwitch(block, post, textP, newPersonality) {
-  if (block.dataset.ltPersonality === newPersonality) return;
+  if (block.dataset.luPersonality === newPersonality) return;
 
   // Update active chip
   const chips = block.querySelectorAll(".lt-personality-chip");
@@ -280,7 +280,7 @@ async function handlePersonalitySwitch(block, post, textP, newPersonality) {
     chip.classList.toggle("active", chip.dataset.personality === newPersonality);
     chip.disabled = true;
   }
-  block.dataset.ltPersonality = newPersonality;
+  block.dataset.luPersonality = newPersonality;
 
   // Show loading on translated post
   const postEl = block.querySelector(".lt-translated-post");
@@ -296,8 +296,8 @@ async function handlePersonalitySwitch(block, post, textP, newPersonality) {
 
   try {
     const text = getPostText(textP);
-    const { ltShowUseful } = await chrome.storage.local.get("ltShowUseful");
-    const showUseful = ltShowUseful !== false;
+    const { luShowUseful } = await chrome.storage.local.get("luShowUseful");
+    const showUseful = luShowUseful !== false;
     const provider = await getActiveProvider();
 
     const { translated_post, substance_rating, useful_things } = await fetchAnalysis(provider, text, showUseful, newPersonality);
@@ -335,7 +335,7 @@ async function handlePersonalitySwitch(block, post, textP, newPersonality) {
 
 /* ── Inline API key prompt ──────────────────────────────────────────── */
 
-function showInlinePrompt(post, actionBar, btn, text) {
+function showInlinePrompt(post, actionBar, btn) {
   const existing = post.querySelector(".lt-inline-prompt");
   if (existing) existing.remove();
 
@@ -352,11 +352,11 @@ function showInlinePrompt(post, actionBar, btn, text) {
   saveBtn.addEventListener("click", async () => {
     const key = input.value.trim();
     if (!key) return;
-    const { ltProviders, ltActiveProvider } = await chrome.storage.local.get(["ltProviders", "ltActiveProvider"]);
-    if (ltProviders) {
-      const p = ltProviders.find((x) => x.id === ltActiveProvider);
+    const { luProviders, luActiveProvider } = await chrome.storage.local.get(["luProviders", "luActiveProvider"]);
+    if (luProviders) {
+      const p = luProviders.find((x) => x.id === luActiveProvider);
       if (p) p.apiKey = key;
-      await chrome.storage.local.set({ ltProviders });
+      await chrome.storage.local.set({ luProviders });
     }
     wrap.remove();
     btn.click();
@@ -378,16 +378,16 @@ async function handleUnfilter(btn, post, actionBar, text) {
 
   if (!provider.apiKey) {
     stopDots(btn);
-    showInlinePrompt(post, actionBar, btn, text);
+    showInlinePrompt(post, actionBar, btn);
     btn.classList.remove("loading");
     btn.innerHTML = `${ICON_SVG}<span>Unfilter</span>`;
     return;
   }
 
   try {
-    const { ltShowUseful, ltPersonality } = await chrome.storage.local.get(["ltShowUseful", "ltPersonality"]);
-    const showUseful = ltShowUseful !== false;
-    const personality = ltPersonality || "blunt";
+    const { luShowUseful, luPersonality } = await chrome.storage.local.get(["luShowUseful", "luPersonality"]);
+    const showUseful = luShowUseful !== false;
+    const personality = luPersonality || "blunt";
     let result = await cacheGet(text);
     if (!result) {
       result = await fetchAnalysis(provider, text, showUseful, personality);
@@ -483,15 +483,15 @@ function startThemeObserver() {
 
 /* ── Auto-analyze (dwell 5s) ─────────────────────────────────────────── */
 
-const AUTO_ANALYZE_MAX = 3;
-let autoAnalyzeCount = 0;
+const AUTO_TRANSLATE_MAX = 3;
+let autoTranslateCount = 0;
 const dwellTimers = new Map();
 const dwellData = new Map();
 
 function canAutoTranslate(btn, post) {
   if (post.querySelector(".lt-result-block")) return false;
   if (btn.classList.contains("loading") || btn.classList.contains("done")) return false;
-  if (autoAnalyzeCount >= AUTO_ANALYZE_MAX) return false;
+  if (autoTranslateCount >= AUTO_TRANSLATE_MAX) return false;
   return true;
 }
 
@@ -553,8 +553,8 @@ function removePending(btn) {
 async function startDwell(btn, post, actionBar, textP) {
   if (dwellTimers.has(btn)) return;
 
-  const { ltDwellTime } = await chrome.storage.local.get("ltDwellTime");
-  const seconds = ltDwellTime || 5;
+  const { luDwellTime } = await chrome.storage.local.get("luDwellTime");
+  const seconds = luDwellTime || 5;
 
   btn.innerHTML = `${createCountdownHTML()}<span></span>`;
   btn.classList.add("pending");
@@ -566,10 +566,10 @@ async function startDwell(btn, post, actionBar, textP) {
     if (!canAutoTranslate(btn, post)) return;
     const text = getPostText(textP);
     if (!text) return;
-    autoAnalyzeCount++;
+    autoTranslateCount++;
     setButtonLoading(btn);
     handleUnfilter(btn, post, actionBar, text).finally(() => {
-      autoAnalyzeCount--;
+      autoTranslateCount--;
     });
   }, seconds * 1000);
   dwellTimers.set(btn, timer);
@@ -584,16 +584,16 @@ function cancelDwell(btn) {
   removePending(btn);
 }
 
-let autoAnalyzeEnabled = false;
-let autoObserver = null;
+let autoTranslateEnabled = false;
+let autoTranslateObserver = null;
 
-async function loadAutoAnalyzeSetting() {
-  const { ltAutoTranslate } = await chrome.storage.local.get("ltAutoTranslate");
-  autoAnalyzeEnabled = ltAutoTranslate === true;
+async function loadAutoTranslateSetting() {
+  const { luAutoTranslate } = await chrome.storage.local.get("luAutoTranslate");
+  autoTranslateEnabled = luAutoTranslate === true;
 }
 
 function scanForAutoTranslate() {
-  if (!autoAnalyzeEnabled || !autoObserver) return;
+  if (!autoTranslateEnabled || !autoTranslateObserver) return;
   const allPosts = new Set();
 
   for (const bar of findActionBars()) {
@@ -604,13 +604,13 @@ function scanForAutoTranslate() {
   for (const post of allPosts) {
     if (!post.hasAttribute("data-lt-auto-observed")) {
       post.setAttribute("data-lt-auto-observed", "true");
-      autoObserver.observe(post);
+      autoTranslateObserver.observe(post);
     }
   }
 }
 
-function startAutoAnalyzeObserver() {
-  autoObserver = new IntersectionObserver(
+function startAutoTranslateObserver() {
+  autoTranslateObserver = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
         const post = entry.target;
@@ -620,7 +620,7 @@ function startAutoAnalyzeObserver() {
         if (!textP) continue;
 
         if (entry.isIntersecting) {
-          if (autoAnalyzeEnabled && canAutoTranslate(btn, post)) {
+          if (autoTranslateEnabled && canAutoTranslate(btn, post)) {
             startDwell(btn, post, btn.parentElement, textP);
           }
         } else {
@@ -638,7 +638,7 @@ function startAutoAnalyzeObserver() {
 function init() {
   scanFeed();
   startThemeObserver();
-  loadAutoAnalyzeSetting().then(startAutoAnalyzeObserver);
+  loadAutoAnalyzeSetting().then(startAutoTranslateObserver);
 
   let debounceTimer;
   const scanAll = () => {
@@ -653,8 +653,8 @@ function init() {
   setInterval(scanAll, 3000);
 
   chrome.storage.onChanged.addListener((changes) => {
-    if (changes.ltAutoTranslate) {
-      autoAnalyzeEnabled = changes.ltAutoTranslate.newValue === true;
+    if (changes.luAutoTranslate) {
+      autoTranslateEnabled = changes.luAutoTranslate.newValue === true;
     }
   });
 }

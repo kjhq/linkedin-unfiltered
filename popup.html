@@ -5,556 +5,272 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LinkedIn Unfiltered</title>
     <style>
-      html {
-        width: 340px;
-        overflow-x: hidden;
-      }
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
+      html { width: 340px; overflow-x: hidden; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-          Arial, sans-serif;
-        font-size: 14px;
-        color: #1d1d1f;
-        padding: 12px 14px;
-        overflow-x: hidden;
-        overflow-y: auto;
-        scrollbar-width: thin;
-        scrollbar-color: #ccc transparent;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 14px; color: #1d1d1f; padding: 10px 14px 8px;
+        overflow-x: hidden; overflow-y: auto;
+        scrollbar-width: thin; scrollbar-color: #ccc transparent;
       }
-      body::-webkit-scrollbar {
-        width: 6px;
+      body::-webkit-scrollbar { width: 6px; }
+      body::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+      body::-webkit-scrollbar-track { background: transparent; }
+
+      h1 { font-size: 15px; font-weight: 600; }
+
+      .counter-bar {
+        margin: 6px 0 10px; padding: 6px 0 8px;
       }
-      body::-webkit-scrollbar-thumb {
-        background: #ccc;
-        border-radius: 3px;
+      .counter-label {
+        font-size: 10px; color: #999; margin-bottom: 2px;
       }
-      body::-webkit-scrollbar-track {
-        background: transparent;
+      .counter-row {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 12px; color: #888;
       }
-      h1 {
-        font-size: 15px;
-        font-weight: 600;
-        margin-bottom: 12px;
+      .counter-row strong { font-weight: 600; color: #1d1d1f; }
+      .counter-row .sep { color: #ddd; }
+
+      /* Collapsible sections */
+      .section { border-top: 1px solid #e8e8e8; }
+      .section-header {
+        display: flex; align-items: center; gap: 6px;
+        width: 100%; padding: 9px 0; border: none; background: none;
+        font-size: 12px; font-weight: 600; color: #555; cursor: pointer;
+        text-align: left;
       }
+      .section-header:hover { color: #1d1d1f; }
+      .section-header .chevron {
+        font-size: 9px; color: #aaa; transition: transform 0.2s;
+      }
+      .section-body {
+        overflow: hidden;
+        max-height: 600px;
+        transition: max-height 0.25s ease, padding 0.25s ease, opacity 0.2s ease;
+        opacity: 1;
+      }
+      .section-body.collapsed {
+        max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0;
+      }
+
       label {
-        display: block;
-        font-size: 12px;
-        font-weight: 500;
-        color: #555;
-        margin-bottom: 4px;
+        display: block; font-size: 12px; font-weight: 500;
+        color: #555; margin-bottom: 4px;
       }
       .input-with-icon {
-        position: relative;
-        margin-bottom: 8px;
-        padding-right: 36px;
+        position: relative; margin-bottom: 8px; padding-right: 36px;
       }
-      input[type="text"],
-      input[type="password"],
-      select {
-        width: 100%;
-        padding: 8px 10px;
-        border: 1px solid #d0d0d0;
-        border-radius: 6px;
-        font-size: 13px;
-        outline: none;
+      input[type="text"], input[type="password"], select {
+        width: 100%; padding: 7px 10px; border: 1px solid #d0d0d0;
+        border-radius: 6px; font-size: 13px; outline: none;
       }
-      input:focus,
-      select:focus {
-        border-color: #0a66c2;
-      }
-      select {
-        background: white;
-        cursor: pointer;
-      }
-      select:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
+      input:focus, select:focus { border-color: #0a66c2; }
+      select { background: white; cursor: pointer; }
+      select:disabled { opacity: 0.5; cursor: not-allowed; }
       .toggle-vis {
-        position: absolute;
-        right: 8px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 13px;
-        color: #666;
-        padding: 2px 4px;
+        position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+        background: none; border: none; cursor: pointer; font-size: 13px; color: #666; padding: 2px 4px;
       }
       .btn {
-        width: 100%;
-        padding: 8px;
-        border: none;
-        border-radius: 16px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
+        width: 100%; padding: 8px; border: none; border-radius: 16px;
+        font-size: 14px; font-weight: 600; cursor: pointer;
       }
-      .btn-primary {
-        background: #0a66c2;
-        color: white;
-      }
-      .btn-primary:hover {
-        background: #004182;
-      }
+      .btn-primary { background: #0a66c2; color: white; }
+      .btn-primary:hover { background: #004182; }
       .btn-secondary {
-        background: #e0e0e0;
-        color: #333;
-        margin-top: 6px;
+        background: #e0e0e0; color: #333; margin-top: 6px;
       }
-      .btn-secondary:hover {
-        background: #ccc;
-      }
+      .btn-secondary:hover { background: #ccc; }
       .btn-danger {
-        background: transparent;
-        color: #d93025;
-        font-size: 12px;
-        font-weight: 500;
-        padding: 4px 8px;
-        width: auto;
-        border-radius: 4px;
-        margin-top: 8px;
+        background: transparent; color: #d93025; font-size: 12px; font-weight: 500;
+        padding: 4px 8px; width: auto; border-radius: 4px;
       }
-      .btn-danger:hover {
-        background: #fce4e4;
-      }
+      .btn-danger:hover { background: #fce4e4; }
       .status {
-        font-size: 12px;
-        margin-top: 10px;
-        padding: 6px 8px;
-        border-radius: 4px;
-        display: none;
+        font-size: 12px; margin-top: 8px; padding: 6px 8px; border-radius: 4px; display: none;
       }
-      .status.ok,
-      .status.err,
-      .status.info {
-        display: block;
-      }
+      .status.ok, .status.err, .status.info { display: block; }
       .status.ok { background: #e2f0e5; color: #1b5e20; }
       .status.err { background: #fce4e4; color: #b71c1c; }
       .status.info { background: #e3f2fd; color: #0a66c2; }
 
-      .section-divider {
-        margin-bottom: 10px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid #e8e8e8;
-      }
-      .provider-header {
-        display: flex;
-        gap: 6px;
-        margin-bottom: 8px;
-      }
-      .provider-header select {
-        flex: 1;
-      }
+      .provider-header { display: flex; gap: 6px; margin-bottom: 8px; }
+      .provider-header select { flex: 1; }
       .btn-add-provider {
-        width: 36px;
-        flex-shrink: 0;
-        padding: 0;
-        font-size: 18px;
-        font-weight: 400;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f0f0f0;
-        color: #555;
-        border-radius: 6px;
+        width: 36px; flex-shrink: 0; padding: 0; font-size: 18px; font-weight: 400;
+        display: flex; align-items: center; justify-content: center;
+        background: #f0f0f0; color: #555; border-radius: 6px; border: none; cursor: pointer;
       }
-      .btn-add-provider:hover {
-        background: #e0e0e0;
-      }
-      .provider-badge {
-        color: #f9a825;
-        margin-right: 2px;
-      }
-      .text-hint {
-        font-size: 11px;
-        color: #888;
-      }
-      .provider-hint {
-        line-height: 1.4;
-        height: 30px;
-        overflow: hidden;
-        margin-bottom: 4px;
-      }
-      .provider-hint a {
-        color: #0a66c2;
-        text-decoration: none;
-      }
+      .btn-add-provider:hover { background: #e0e0e0; }
+      .text-hint { font-size: 11px; color: #888; }
+      .provider-hint { line-height: 1.4; height: 30px; overflow: hidden; margin-bottom: 4px; }
+      .provider-hint a { color: #0a66c2; text-decoration: none; }
 
-      /* Base URL row */
-      .base-url-row {
-        margin-bottom: 12px;
-        display: none;
-      }
-      .base-url-row.show {
-        display: block;
-      }
+      .base-url-row { margin-bottom: 12px; display: none; }
+      .base-url-row.show { display: block; }
 
-      /* Model section */
-      .model-hint {
-        margin-top: 4px;
-      }
-
-      /* Personality section */
-      .personality-section {
-        margin-top: 12px;
-        padding-top: 10px;
-        border-top: 1px solid #e8e8e8;
-      }
-      .personality-section label {
-        margin-bottom: 6px;
-      }
-      .personality-section select {
-        margin-bottom: 4px;
-      }
-      .personality-hint {
-        margin-top: 0;
-      }
+      .model-hint { margin-top: 4px; }
 
       /* Add provider form */
       .add-provider-form {
-        display: none;
-        margin-top: 10px;
-        padding: 12px;
-        background: #f9f9f9;
-        border-radius: 8px;
-        border: 1px solid #e8e8e8;
+        display: none; margin-top: 10px; padding: 12px;
+        background: #f9f9f9; border-radius: 8px; border: 1px solid #e8e8e8;
       }
-      .add-provider-form.open {
-        display: block;
-      }
-      .add-provider-form label {
-        margin-bottom: 2px;
-      }
-      .add-provider-form input,
-      .add-provider-form select {
-        margin-bottom: 10px;
-      }
-      .add-provider-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 4px;
-      }
-      .add-provider-actions .btn {
-        padding: 6px 12px;
-        font-size: 12px;
-        border-radius: 8px;
-      }
+      .add-provider-form.open { display: block; }
+      .add-provider-form label { margin-bottom: 2px; }
+      .add-provider-form input, .add-provider-form select { margin-bottom: 10px; }
+      .add-provider-actions { display: flex; gap: 8px; margin-top: 4px; }
+      .add-provider-actions .btn { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
 
-      /* Settings section */
-      .settings-section {
-        margin-top: 10px;
-        padding-top: 10px;
-        border-top: 1px solid #e8e8e8;
+      /* Toggle rows */
+      .toggle-row, .dwell-row {
+        display: flex; align-items: center; justify-content: space-between; padding: 5px 0;
       }
-      .toggle-row,
-      .dwell-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 4px 0;
-      }
-      .toggle-label {
-        font-size: 13px;
-        font-weight: 500;
-        color: #333;
-      }
-      .toggle-desc {
-        margin-top: 2px;
-        padding-right: 44px;
-      }
+      .toggle-label { font-size: 13px; font-weight: 500; color: #333; }
+      .toggle-desc { margin-top: 1px; padding-right: 44px; }
       .toggle-switch {
-        position: relative;
-        width: 36px;
-        height: 20px;
-        flex-shrink: 0;
+        position: relative; width: 36px; height: 20px; flex-shrink: 0;
       }
-      .toggle-switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-      }
+      .toggle-switch input { opacity: 0; width: 0; height: 0; }
       .toggle-slider {
-        position: absolute;
-        inset: 0;
-        background: #ccc;
-        border-radius: 20px;
-        cursor: pointer;
-        transition: background 0.2s ease;
+        position: absolute; inset: 0; background: #ccc; border-radius: 20px;
+        cursor: pointer; transition: background 0.2s ease;
       }
       .toggle-slider::before {
-        content: "";
-        position: absolute;
-        left: 2px;
-        top: 2px;
-        width: 16px;
-        height: 16px;
-        background: white;
-        border-radius: 50%;
+        content: ""; position: absolute; left: 2px; top: 2px;
+        width: 16px; height: 16px; background: white; border-radius: 50%;
         transition: transform 0.2s ease;
       }
-      .toggle-switch input:checked + .toggle-slider {
-        background: #0a66c2;
-      }
-      .toggle-switch input:checked + .toggle-slider::before {
-        transform: translateX(16px);
-      }
-      .dwell-input {
-        width: 50px;
-        padding: 4px 6px;
-        border: 1px solid #d0d0d0;
-        border-radius: 4px;
-        font-size: 13px;
-        text-align: center;
-        outline: none;
-      }
-      .dwell-input:focus {
-        border-color: #0a66c2;
-      }
+      .toggle-switch input:checked + .toggle-slider { background: #0a66c2; }
+      .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
 
-      /* Counter */
-      .counter-card {
-        background: #f4f6f8;
-        border-radius: 10px;
-        padding: 12px 14px;
-        margin-bottom: 14px;
+      .dwell-input {
+        width: 50px; padding: 4px 6px; border: 1px solid #d0d0d0;
+        border-radius: 4px; font-size: 13px; text-align: center; outline: none;
       }
-      .counter-card-title {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #888;
-        margin-bottom: 8px;
-      }
-      .counter-card-nums {
-        display: flex;
-        gap: 24px;
-      }
-      .counter-card-item {
-        flex: 1;
-      }
-      .counter-card-label {
-        font-size: 11px;
-        color: #777;
-        margin-bottom: 2px;
-      }
-      .counter-card-value {
-        font-size: 26px;
-        font-weight: 700;
-        color: #1d1d1f;
-        line-height: 1.1;
-      }
-      .counter-card-value.loading {
-        opacity: 0.3;
-      }
-      .counter-card-desc {
-        font-size: 11px;
-        color: #999;
-        margin-top: 6px;
-        line-height: 1.3;
-      }
+      .dwell-input:focus { border-color: #0a66c2; }
     </style>
   </head>
   <body>
     <h1>LinkedIn Unfiltered</h1>
 
-    <!-- Counter card -->
-    <div class="counter-card" id="counterCard">
-      <div class="counter-card-title">Translation Counter</div>
-      <div class="counter-card-nums">
-        <div class="counter-card-item">
-          <div class="counter-card-label">You</div>
-          <div class="counter-card-value loading" id="localCount">-</div>
-        </div>
-        <div class="counter-card-item">
-          <div class="counter-card-label">Global</div>
-          <div class="counter-card-value loading" id="globalCount">-</div>
-        </div>
-      </div>
-      <div class="counter-card-desc">
-        Posts translated with LinkedIn Unfiltered across all users
+    <div class="counter-bar">
+      <div class="counter-label">Translations</div>
+      <div class="counter-row">
+        <span>You: <strong class="loading" id="localCount">-</strong></span>
+        <span class="sep">•</span>
+        <span>Global: <strong class="loading" id="globalCount">-</strong></span>
       </div>
     </div>
 
-    <!-- Provider -->
-    <div class="provider-section section-divider">
-      <label for="providerSelect">Provider</label>
-      <div class="provider-header">
-        <select id="providerSelect"></select>
-        <button
-          class="btn btn-add-provider"
-          id="addProviderBtn"
-          title="Add custom provider"
-        >
-          +
-        </button>
-      </div>
-
-      <div class="provider-hint text-hint" id="providerHint"></div>
-
-      <div class="base-url-row" id="baseUrlRow">
-        <label for="baseUrlInput">Base URL</label>
-        <input
-          type="text"
-          id="baseUrlInput"
-          placeholder="https://api.example.com/v1"
-        />
-      </div>
-
-      <label for="apiKey">API Key</label>
-      <div class="input-with-icon">
-        <input
-          type="password"
-          id="apiKey"
-          placeholder="Enter API key"
-          autocomplete="off"
-        />
-        <button class="toggle-vis" id="toggleKey" title="Show/hide key">
-          👁
-        </button>
-      </div>
-
-      <button class="btn btn-primary" id="saveBtn">Save</button>
-      <div class="status" id="status"></div>
-
-      <button
-        class="btn btn-danger"
-        id="deleteProviderBtn"
-        style="display: none"
-      >
-        Delete Provider
+    <!-- Section: Provider & API Key -->
+    <div class="section" id="section-provider">
+      <button class="section-header" data-toggle="section-provider">
+        <span class="chevron">&#9660;</span> Provider &amp; API Key
       </button>
-    </div>
+      <div class="section-body">
+        <div class="provider-header">
+          <select id="providerSelect"></select>
+          <button class="btn-add-provider" id="addProviderBtn" title="Add custom provider">+</button>
+        </div>
+        <div class="provider-hint text-hint" id="providerHint"></div>
+        <div class="base-url-row" id="baseUrlRow">
+          <label for="baseUrlInput">Base URL</label>
+          <input type="text" id="baseUrlInput" placeholder="https://api.example.com/v1" />
+        </div>
+        <label for="apiKey">API Key</label>
+        <div class="input-with-icon">
+          <input type="password" id="apiKey" placeholder="Enter API key" autocomplete="off" />
+          <button class="toggle-vis" id="toggleKey" title="Show/hide key">&#128065;</button>
+        </div>
+        <button class="btn btn-primary" id="saveBtn">Save</button>
+        <div class="status" id="status"></div>
+        <button class="btn btn-danger" id="deleteProviderBtn" style="display:none">Delete Provider</button>
 
-    <!-- Add custom provider form -->
-    <div class="add-provider-form" id="addProviderForm">
-      <label for="newProviderName">Name</label>
-      <input
-        type="text"
-        id="newProviderName"
-        placeholder="e.g. My Local LLM"
-      />
-      <label for="newProviderUrl">Base URL</label>
-      <input
-        type="text"
-        id="newProviderUrl"
-        placeholder="https://api.example.com/v1"
-      />
-      <label for="newProviderKey">API Key</label>
-      <input
-        type="password"
-        id="newProviderKey"
-        placeholder="Enter API key"
-        autocomplete="off"
-      />
-      <label for="newProviderModel">Model</label>
-      <input
-        type="text"
-        id="newProviderModel"
-        placeholder="e.g. llama-3.1-8b-instant"
-      />
-      <div class="add-provider-actions">
-        <button class="btn btn-primary" id="saveNewProviderBtn">
-          Add Provider
-        </button>
-        <button class="btn btn-secondary" id="cancelAddProviderBtn">Cancel</button>
-      </div>
-    </div>
-
-    <!-- Model -->
-    <div class="model-section section-divider">
-      <label for="modelSelect">Model</label>
-      <select id="modelSelect" disabled>
-        <option value="">Enter your API key to load models</option>
-      </select>
-      <div class="model-hint text-hint" id="modelHint">
-        Enter your API key to load models
-      </div>
-    </div>
-
-    <button class="btn btn-secondary" id="clearBtn" style="display: none">
-      Remove API Key
-    </button>
-
-    <!-- Personality -->
-    <div class="personality-section section-divider">
-      <label for="personalitySelect">Personality</label>
-      <select id="personalitySelect">
-        <option value="blunt">Blunt</option>
-        <option value="sarcastic">Sarcastic</option>
-        <option value="corporate">Corporate</option>
-        <option value="genz">Gen Z</option>
-      </select>
-      <div class="personality-hint text-hint" id="personalityHint">
-        Honest, no-BS translations
-      </div>
-    </div>
-
-    <!-- Settings -->
-    <div class="settings-section">
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-label">Show useful takeaways</div>
-          <div class="toggle-desc text-hint">
-            Display extracted takeaways in results
+        <div class="add-provider-form" id="addProviderForm">
+          <label for="newProviderName">Name</label>
+          <input type="text" id="newProviderName" placeholder="e.g. My Local LLM" />
+          <label for="newProviderUrl">Base URL</label>
+          <input type="text" id="newProviderUrl" placeholder="https://api.example.com/v1" />
+          <label for="newProviderKey">API Key</label>
+          <input type="password" id="newProviderKey" placeholder="Enter API key" autocomplete="off" />
+          <label for="newProviderModel">Model</label>
+          <input type="text" id="newProviderModel" placeholder="e.g. llama-3.1-8b-instant" />
+          <div class="add-provider-actions">
+            <button class="btn btn-primary" id="saveNewProviderBtn">Add Provider</button>
+            <button class="btn btn-secondary" id="cancelAddProviderBtn">Cancel</button>
           </div>
         </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="toggleUseful" checked />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-      <div class="toggle-row" style="margin-top: 12px">
-        <div>
-          <div class="toggle-label">Auto-analyze</div>
-          <div class="toggle-desc text-hint">
-            Analyzes posts automatically after they've been on screen for a set time
-          </div>
+
+        <div style="margin-top:10px">
+          <label for="modelSelect">Model</label>
+          <select id="modelSelect" disabled>
+            <option value="">Enter your API key to load models</option>
+          </select>
+          <div class="model-hint text-hint" id="modelHint">Enter your API key to load models</div>
         </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="toggleAuto" />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-      <div
-        class="dwell-row"
-        id="dwellRow"
-        style="margin-top: 10px; display: none"
-      >
-        <label class="toggle-label" for="dwellInput"
-          >View duration (seconds)</label
-        >
-        <input
-          type="number"
-          id="dwellInput"
-          class="dwell-input"
-          min="1"
-          max="30"
-          value="5"
-        />
+
+        <button class="btn btn-secondary" id="clearBtn" style="display:none">Remove API Key</button>
       </div>
     </div>
 
-    <!-- Counter opt-out -->
-    <div class="counter-section">
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-label">Share translation count</div>
-          <div class="toggle-desc text-hint">
-            Contributes to the global counter
+    <!-- Section: Personality -->
+    <div class="section" id="section-personality">
+      <button class="section-header" data-toggle="section-personality">
+        <span class="chevron">&#9660;</span> Personality
+      </button>
+      <div class="section-body">
+        <select id="personalitySelect">
+          <option value="blunt">Blunt</option>
+          <option value="sarcastic">Sarcastic</option>
+          <option value="corporate">Corporate</option>
+          <option value="genz">Gen Z</option>
+        </select>
+        <div class="text-hint" id="personalityHint" style="margin-top:4px">Honest, no-BS translations</div>
+      </div>
+    </div>
+
+    <!-- Section: Settings (collapsed by default) -->
+    <div class="section" id="section-settings">
+      <button class="section-header" data-toggle="section-settings">
+        <span class="chevron">&#9654;</span> Settings
+      </button>
+      <div class="section-body collapsed">
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Show useful takeaways</div>
+            <div class="toggle-desc text-hint">Display extracted takeaways in results</div>
           </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleUseful" checked />
+            <span class="toggle-slider"></span>
+          </label>
         </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="toggleCounter" checked />
-          <span class="toggle-slider"></span>
-        </label>
+        <div class="toggle-row" style="margin-top:8px">
+          <div>
+            <div class="toggle-label">Auto-analyze</div>
+            <div class="toggle-desc text-hint">Analyzes posts after they've been on screen</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleAuto" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="dwell-row" id="dwellRow" style="margin-top:8px;display:none">
+          <label class="toggle-label" for="dwellInput">View duration (seconds)</label>
+          <input type="number" id="dwellInput" class="dwell-input" min="1" max="30" value="5" />
+        </div>
+        <div class="toggle-row" style="margin-top:8px">
+          <div>
+            <div class="toggle-label">Share translation count</div>
+            <div class="toggle-desc text-hint">Contributes to the global counter</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="counterOptOut" checked />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
       </div>
     </div>
 

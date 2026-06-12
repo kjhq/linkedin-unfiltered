@@ -1,8 +1,10 @@
 /* ── Config ─────────────────────────────────────────────────────────── */
 
 const COUNTER_API = "https://api.kjhq.dev/linkedin/count";
-const COUNTER_KEY = "ltCounter";
-const COUNTER_HASHES_KEY = "ltCountedHashes";
+const COUNTER_KEY = "luCounter";
+const COUNTER_HASHES_KEY = "luCountedHashes";
+const COUNTER_TTL_MS = 600_000;
+const COUNTER_OPT_OUT_KEY = "luCounterOptOut";
 
 const DEFAULT_PROVIDER = {
   baseUrl: "https://api.mistral.ai/v1",
@@ -450,7 +452,7 @@ async function analyzePost(provider, text, showUseful, personality, onRetry) {
       response_format: {
         type: "json_schema",
         json_schema: {
-          name: "linkedin_reality",
+          name: "linkedin_translator",
           strict: true,
           schema: showUseful ? RESPONSE_SCHEMA : RESPONSE_SCHEMA_SIMPLE,
         },
@@ -510,8 +512,8 @@ async function analyzePost(provider, text, showUseful, personality, onRetry) {
 
 async function handleIncrementCounter(postHash) {
   try {
-    const { ltCounterOptOut } = await chrome.storage.local.get("ltCounterOptOut");
-    if (ltCounterOptOut) return { success: false, reason: "opted out" };
+    const { luCounterOptOut } = await chrome.storage.local.get(COUNTER_OPT_OUT_KEY);
+    if (luCounterOptOut) return { success: false, reason: "opted out" };
 
     const data = await chrome.storage.local.get(COUNTER_HASHES_KEY);
     const hashes = data[COUNTER_HASHES_KEY] || [];
@@ -529,7 +531,7 @@ async function handleIncrementCounter(postHash) {
     const localCount = (counterData[COUNTER_KEY]?.localCount || 0) + 1;
     await chrome.storage.local.set({
       [COUNTER_HASHES_KEY]: hashes,
-      [COUNTER_KEY]: { localCount, globalCount },
+      [COUNTER_KEY]: { localCount, globalCount, lastGlobalFetch: Date.now() },
     });
 
     return { success: true, localCount, globalCount };
@@ -543,12 +545,20 @@ async function handleGetCounter() {
   try {
     const counterData = await chrome.storage.local.get(COUNTER_KEY);
     const localCount = counterData[COUNTER_KEY]?.localCount || 0;
+    let globalCount = counterData[COUNTER_KEY]?.globalCount || 0;
+    const lastGlobalFetch = counterData[COUNTER_KEY]?.lastGlobalFetch || 0;
+
+    if (Date.now() - lastGlobalFetch < COUNTER_TTL_MS) {
+      return { success: true, localCount, globalCount };
+    }
 
     const res = await fetch(COUNTER_API);
-    let globalCount = 0;
     if (res.ok) {
       const data = await res.json();
       globalCount = data.globalCount || 0;
+      await chrome.storage.local.set({
+        [COUNTER_KEY]: { localCount, globalCount, lastGlobalFetch: Date.now() },
+      });
     }
 
     return { success: true, localCount, globalCount };

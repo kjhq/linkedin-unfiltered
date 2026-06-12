@@ -10,7 +10,7 @@ LinkedIn Unfiltered does not collect, store, or transmit any personal data to th
 ## What leaves your device
 
 - **Post text** — when you click "Unfilter" (or auto-translate triggers), the text of the LinkedIn post you selected is sent to the AI provider you configured. This is the core function of the extension.
-- **Translation counter** — when you translate a post, a +1 is sent to a global counter at `api.linkedin-unfiltered.com/count` (or the configured endpoint). No post text or identifying data is sent — only an anonymous increment. This is opt-out: you can disable it in the extension popup at any time.
+- **Translation counter** — when you translate a post, a +1 is sent to a global counter at `https://api.kjhq.dev/linkedin/count`. No post text or identifying data is sent — only an anonymous increment. This is opt-out: you can disable it in the extension popup at any time.
 - **Model registry fetch** — on first use, the extension fetches a list of available AI models from `https://models.dev/api.json` to populate the provider dropdown. No personal data is included in this request.
 
 ## What is never collected

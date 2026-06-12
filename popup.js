@@ -1,10 +1,10 @@
 /* ── Config ─────────────────────────────────────────────────────────── */
 
 const REGISTRY_URL = "https://models.dev/api.json";
-const REGISTRY_CACHE_KEY = "ltModelRegistry";
+const REGISTRY_CACHE_KEY = "luModelRegistry";
 const REGISTRY_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-const STORAGE_KEY = "ltProviders";
-const ACTIVE_KEY = "ltActiveProvider";
+const STORAGE_KEY = "luProviders";
+const ACTIVE_KEY = "luActiveProvider";
 const DEFAULT_PROVIDER_ID = "mistral";
 
 // Fallback API URLs for providers missing from the registry
@@ -57,7 +57,7 @@ const dwellInput = document.getElementById("dwellInput");
 
 const localCountEl = document.getElementById("localCount");
 const globalCountEl = document.getElementById("globalCount");
-const toggleCounter = document.getElementById("toggleCounter");
+const counterOptOutCheckbox = document.getElementById("counterOptOut");
 
 const personalitySelect = document.getElementById("personalitySelect");
 const personalityHint = document.getElementById("personalityHint");
@@ -69,7 +69,7 @@ const PERSONALITY_HINTS = {
   genz: "Internet speak and memes",
 };
 
-let visible = false;
+let apiKeyVisible = false;
 let providers = [];
 let activeId = null;
 let registry = null; // { providers: { id -> providerData }, models: [ { id, providerId, ... } ] }
@@ -477,9 +477,9 @@ deleteProviderBtn.addEventListener("click", async () => {
 /* ── Key toggle ─────────────────────────────────────────────────────── */
 
 toggleKeyBtn.addEventListener("click", () => {
-  visible = !visible;
-  apiKeyInput.type = visible ? "text" : "password";
-  toggleKeyBtn.textContent = visible ? "🙈" : "👁";
+  apiKeyVisible = !apiKeyVisible;
+  apiKeyInput.type = apiKeyVisible ? "text" : "password";
+  toggleKeyBtn.textContent = apiKeyVisible ? "🙈" : "👁";
 });
 
 /* ── Save / Clear ───────────────────────────────────────────────────── */
@@ -549,36 +549,36 @@ dwellInput.addEventListener("change", async () => {
   if (isNaN(val) || val < 1) val = 1;
   if (val > 30) val = 30;
   dwellInput.value = val;
-  await chrome.storage.local.set({ ltDwellTime: val });
+  await chrome.storage.local.set({ luDwellTime: val });
 });
 
 async function loadSettings() {
-  const { ltShowUseful, ltAutoTranslate, ltDwellTime, ltPersonality } =
+  const { luShowUseful, luAutoTranslate, luDwellTime, luPersonality } =
     await chrome.storage.local.get([
-      "ltShowUseful",
-      "ltAutoTranslate",
-      "ltDwellTime",
-      "ltPersonality",
+      "luShowUseful",
+      "luAutoTranslate",
+      "luDwellTime",
+      "luPersonality",
     ]);
-  toggleUseful.checked = ltShowUseful !== false;
-  toggleAuto.checked = ltAutoTranslate === true;
-  dwellInput.value = ltDwellTime || 5;
+  toggleUseful.checked = luShowUseful !== false;
+  toggleAuto.checked = luAutoTranslate === true;
+  dwellInput.value = luDwellTime || 5;
   dwellRow.style.display = toggleAuto.checked ? "flex" : "none";
 
-  personalitySelect.value = ltPersonality || "blunt";
+  personalitySelect.value = luPersonality || "blunt";
   personalityHint.textContent = PERSONALITY_HINTS[personalitySelect.value] || PERSONALITY_HINTS.blunt;
 
   toggleUseful.addEventListener("change", () =>
-    chrome.storage.local.set({ ltShowUseful: toggleUseful.checked }),
+    chrome.storage.local.set({ luShowUseful: toggleUseful.checked }),
   );
   toggleAuto.addEventListener("change", () => {
-    chrome.storage.local.set({ ltAutoTranslate: toggleAuto.checked });
+    chrome.storage.local.set({ luAutoTranslate: toggleAuto.checked });
     dwellRow.style.display = toggleAuto.checked ? "flex" : "none";
   });
 
   personalitySelect.addEventListener("change", () => {
     const val = personalitySelect.value;
-    chrome.storage.local.set({ ltPersonality: val });
+    chrome.storage.local.set({ luPersonality: val });
     personalityHint.textContent = PERSONALITY_HINTS[val] || PERSONALITY_HINTS.blunt;
   });
 }
@@ -600,21 +600,34 @@ async function loadCounter() {
 }
 
 async function initCounter() {
-  const { ltCounterOptOut } = await chrome.storage.local.get("ltCounterOptOut");
-  toggleCounter.checked = ltCounterOptOut !== true;
+  const { luCounterOptOut } = await chrome.storage.local.get("luCounterOptOut");
+  counterOptOutCheckbox.checked = luCounterOptOut !== true;
   loadCounter();
 
-  toggleCounter.addEventListener("change", () => {
-    const optedOut = !toggleCounter.checked;
-    chrome.storage.local.set({ ltCounterOptOut: optedOut });
+  counterOptOutCheckbox.addEventListener("change", () => {
+    const optedOut = !counterOptOutCheckbox.checked;
+    chrome.storage.local.set({ luCounterOptOut: optedOut });
   });
 
   chrome.storage.onChanged.addListener((changes) => {
-    if (changes.ltCounter || changes.ltCountedHashes) {
+    if (changes.luCounter || changes.luCountedHashes) {
       loadCounter();
     }
   });
 }
+
+/* ── Collapsible sections ───────────────────────────────── */
+
+document.addEventListener("click", (e) => {
+  const header = e.target.closest(".section-header");
+  if (!header) return;
+  const section = document.getElementById(header.dataset.toggle);
+  if (!section) return;
+  const body = section.querySelector(".section-body");
+  const chevron = header.querySelector(".chevron");
+  const isCollapsed = body.classList.toggle("collapsed");
+  chevron.textContent = isCollapsed ? "▶" : "▼";
+});
 
 /* ── Init ───────────────────────────────────────────────────────────── */
 
