@@ -48,6 +48,7 @@ features:
 2. add your api key (mistral / openrouter / any openai-compatible provider)
 3. choose default personality
 4. enable / disable auto-translate toggle
+5. opt out of the global translation counter anytime
 
 ---
 

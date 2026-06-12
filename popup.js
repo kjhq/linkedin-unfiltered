@@ -55,6 +55,10 @@ const toggleAuto = document.getElementById("toggleAuto");
 const dwellRow = document.getElementById("dwellRow");
 const dwellInput = document.getElementById("dwellInput");
 
+const localCountEl = document.getElementById("localCount");
+const globalCountEl = document.getElementById("globalCount");
+const toggleCounter = document.getElementById("toggleCounter");
+
 const personalitySelect = document.getElementById("personalitySelect");
 const personalityHint = document.getElementById("personalityHint");
 
@@ -579,6 +583,39 @@ async function loadSettings() {
   });
 }
 
+/* ── Counter ────────────────────────────────────────────────────────── */
+
+async function loadCounter() {
+  localCountEl.classList.add("loading");
+  globalCountEl.classList.add("loading");
+  try {
+    const response = await chrome.runtime.sendMessage({ type: "getCounter" });
+    if (response.success) {
+      localCountEl.textContent = response.localCount;
+      globalCountEl.textContent = response.globalCount.toLocaleString();
+    }
+  } catch {}
+  localCountEl.classList.remove("loading");
+  globalCountEl.classList.remove("loading");
+}
+
+async function initCounter() {
+  const { ltCounterOptOut } = await chrome.storage.local.get("ltCounterOptOut");
+  toggleCounter.checked = ltCounterOptOut !== true;
+  loadCounter();
+
+  toggleCounter.addEventListener("change", () => {
+    const optedOut = !toggleCounter.checked;
+    chrome.storage.local.set({ ltCounterOptOut: optedOut });
+  });
+
+  chrome.storage.onChanged.addListener((changes) => {
+    if (changes.ltCounter || changes.ltCountedHashes) {
+      loadCounter();
+    }
+  });
+}
+
 /* ── Init ───────────────────────────────────────────────────────────── */
 
 (async function init() {
@@ -592,6 +629,7 @@ async function loadSettings() {
   renderProviderDropdown();
   renderActiveProvider();
   loadSettings();
+  initCounter();
 
   statusEl.className = "status";
 })();

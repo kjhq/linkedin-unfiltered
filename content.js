@@ -320,6 +320,8 @@ async function handlePersonalitySwitch(block, post, textP, newPersonality) {
     } else if (insightsEl) {
       insightsEl.style.display = "none";
     }
+
+    chrome.runtime.sendMessage({ type: "incrementCounter", postHash: getCacheKey(text) }).catch(() => {});
   } catch (e) {
     console.error("[LT] Personality switch error:", e.message);
     if (postEl) {
@@ -395,6 +397,7 @@ async function handleUnfilter(btn, post, actionBar, text) {
     if (textP) renderResult(post, textP, result, showUseful, personality);
     setButtonComplete(btn);
     requestAnimationFrame(fix);
+    chrome.runtime.sendMessage({ type: "incrementCounter", postHash: getCacheKey(text) }).catch(() => {});
   } catch (e) {
     console.error("[LT] handleUnfilter ERROR:", e.message);
     stopDots(btn);

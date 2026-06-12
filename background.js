@@ -1,5 +1,9 @@
 /* ── Config ─────────────────────────────────────────────────────────── */
 
+const COUNTER_API = "https://yourdomain.com/api/count";
+const COUNTER_KEY = "ltCounter";
+const COUNTER_HASHES_KEY = "ltCountedHashes";
+
 const DEFAULT_PROVIDER = {
   baseUrl: "https://api.mistral.ai/v1",
   apiKey: "",
@@ -502,25 +506,87 @@ async function analyzePost(provider, text, showUseful, personality, onRetry) {
   }
 }
 
+/* ── Counter ────────────────────────────────────────────────────────── */
+
+async function handleIncrementCounter(postHash) {
+  try {
+    const { ltCounterOptOut } = await chrome.storage.local.get("ltCounterOptOut");
+    if (ltCounterOptOut) return { success: false, reason: "opted out" };
+
+    const data = await chrome.storage.local.get(COUNTER_HASHES_KEY);
+    const hashes = data[COUNTER_HASHES_KEY] || [];
+    if (hashes.includes(postHash)) return { success: false, reason: "already counted" };
+
+    const res = await fetch(COUNTER_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    const { globalCount } = await res.json();
+
+    hashes.push(postHash);
+    const counterData = await chrome.storage.local.get(COUNTER_KEY);
+    const localCount = (counterData[COUNTER_KEY]?.localCount || 0) + 1;
+    await chrome.storage.local.set({
+      [COUNTER_HASHES_KEY]: hashes,
+      [COUNTER_KEY]: { localCount, globalCount },
+    });
+
+    return { success: true, localCount, globalCount };
+  } catch (e) {
+    console.error("[LT] Counter error:", e.message);
+    return { success: false, error: e.message };
+  }
+}
+
+async function handleGetCounter() {
+  try {
+    const counterData = await chrome.storage.local.get(COUNTER_KEY);
+    const localCount = counterData[COUNTER_KEY]?.localCount || 0;
+
+    const res = await fetch(COUNTER_API);
+    let globalCount = 0;
+    if (res.ok) {
+      const data = await res.json();
+      globalCount = data.globalCount || 0;
+    }
+
+    return { success: true, localCount, globalCount };
+  } catch (e) {
+    console.error("[LT] Get counter error:", e.message);
+    return { success: false, error: e.message };
+  }
+}
+
 /* ── Message listener ───────────────────────────────────────────────── */
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.type !== "analyzePost") return false;
+  if (msg.type === "analyzePost") {
+    const { provider, text, showUseful, personality } = msg;
+    const tabId = sender.tab?.id;
 
-  const { provider, text, showUseful, personality } = msg;
-  const tabId = sender.tab?.id;
+    const onRetry = (attempt, label) => {
+      if (tabId) {
+        chrome.tabs
+          .sendMessage(tabId, { type: "retryProgress", attempt, label })
+          .catch(() => {});
+      }
+    };
 
-  const onRetry = (attempt, label) => {
-    if (tabId) {
-      chrome.tabs
-        .sendMessage(tabId, { type: "retryProgress", attempt, label })
-        .catch(() => {});
-    }
-  };
+    analyzePost(provider, text, showUseful, personality, onRetry)
+      .then((result) => sendResponse({ success: true, result }))
+      .catch((e) => sendResponse({ success: false, error: e.message }));
 
-  analyzePost(provider, text, showUseful, personality, onRetry)
-    .then((result) => sendResponse({ success: true, result }))
-    .catch((e) => sendResponse({ success: false, error: e.message }));
+    return true; // keep sendResponse channel open
+  }
 
-  return true; // keep sendResponse channel open for async response
+  if (msg.type === "incrementCounter") {
+    handleIncrementCounter(msg.postHash).then(sendResponse);
+    return true;
+  }
+
+  if (msg.type === "getCounter") {
+    handleGetCounter().then(sendResponse);
+    return true;
+  }
 });

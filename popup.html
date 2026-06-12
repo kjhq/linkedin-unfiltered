@@ -318,10 +318,70 @@
       .dwell-input:focus {
         border-color: #0a66c2;
       }
+
+      /* Counter */
+      .counter-card {
+        background: #f4f6f8;
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 14px;
+      }
+      .counter-card-title {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #888;
+        margin-bottom: 8px;
+      }
+      .counter-card-nums {
+        display: flex;
+        gap: 24px;
+      }
+      .counter-card-item {
+        flex: 1;
+      }
+      .counter-card-label {
+        font-size: 11px;
+        color: #777;
+        margin-bottom: 2px;
+      }
+      .counter-card-value {
+        font-size: 26px;
+        font-weight: 700;
+        color: #1d1d1f;
+        line-height: 1.1;
+      }
+      .counter-card-value.loading {
+        opacity: 0.3;
+      }
+      .counter-card-desc {
+        font-size: 11px;
+        color: #999;
+        margin-top: 6px;
+        line-height: 1.3;
+      }
     </style>
   </head>
   <body>
     <h1>LinkedIn Unfiltered</h1>
+
+    <!-- Counter card -->
+    <div class="counter-card" id="counterCard">
+      <div class="counter-card-title">Translation Counter</div>
+      <div class="counter-card-nums">
+        <div class="counter-card-item">
+          <div class="counter-card-label">You</div>
+          <div class="counter-card-value loading" id="localCount">-</div>
+        </div>
+        <div class="counter-card-item">
+          <div class="counter-card-label">Global</div>
+          <div class="counter-card-value loading" id="globalCount">-</div>
+        </div>
+      </div>
+      <div class="counter-card-desc">
+        Posts translated with LinkedIn Unfiltered across all users
+      </div>
+    </div>
 
     <!-- Provider -->
     <div class="provider-section section-divider">
@@ -479,6 +539,22 @@
           max="30"
           value="5"
         />
+      </div>
+    </div>
+
+    <!-- Counter opt-out -->
+    <div class="counter-section">
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Share translation count</div>
+          <div class="toggle-desc text-hint">
+            Contributes to the global counter
+          </div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggleCounter" checked />
+          <span class="toggle-slider"></span>
+        </label>
       </div>
     </div>
 
