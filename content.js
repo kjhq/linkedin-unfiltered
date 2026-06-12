@@ -638,7 +638,7 @@ function startAutoTranslateObserver() {
 function init() {
   scanFeed();
   startThemeObserver();
-  loadAutoAnalyzeSetting().then(startAutoTranslateObserver);
+  loadAutoTranslateSetting().then(startAutoTranslateObserver);
 
   let debounceTimer;
   const scanAll = () => {
