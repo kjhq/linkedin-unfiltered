@@ -3,3 +3,6 @@ index.html
 profile.html
 *.zip
 .DS_Store
+
+# Counter deployment
+counter-deploy/

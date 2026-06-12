@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build chrome.zip
+        run: |
+          mkdir -p /tmp/chrome-build
+          cp manifest.json background.js content.js popup.html popup.js styles.css /tmp/chrome-build/
+          cp -r icons /tmp/chrome-build/
+          cd /tmp/chrome-build && zip -r $OLDPWD/chrome.zip .
+
+      - name: Build firefox.zip
+        run: |
+          mkdir -p /tmp/firefox-build
+          cp manifest-firefox.json /tmp/firefox-build/manifest.json
+          cp background.js content.js popup.html popup.js styles.css /tmp/firefox-build/
+          cp -r icons /tmp/firefox-build/
+          cd /tmp/firefox-build && zip -r $OLDPWD/firefox.zip .
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            chrome.zip
+            firefox.zip
+          generate_release_notes: true

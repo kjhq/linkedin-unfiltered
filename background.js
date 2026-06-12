@@ -1,6 +1,6 @@
 /* ── Config ─────────────────────────────────────────────────────────── */
 
-const COUNTER_API = "https://yourdomain.com/api/count";
+const COUNTER_API = "https://api.kjhq.dev/linkedin/count";
 const COUNTER_KEY = "ltCounter";
 const COUNTER_HASHES_KEY = "ltCountedHashes";
 
