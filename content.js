@@ -48,7 +48,16 @@ async function cacheSet(text, result) {
 /* ── Config ─────────────────────────────────────────────────────────── */
 
 const DEFAULT_PROVIDER = { baseUrl: "https://api.mistral.ai/v1", apiKey: "", model: "mistral-small-latest" };
-const TEXT_SEL = 'p[componentkey^="feed-commentary"], .feed-shared-inline-show-more-text';
+const TEXT_SEL = [
+  'p[componentkey^="feed-commentary"]',
+  '.feed-shared-inline-show-more-text',
+  '.update-components-text',
+  '.feed-shared-text',
+  '[data-test-id="main-feed-activity-card__commentary"]',
+  '.attributed-text-segment-list__content',
+  '.feed-shared-update-v2__description',
+  '.feed-shared-text__text-view',
+].join(', ');
 const TEXT_BOX_SEL = '[data-testid="expandable-text-box"]';
 
 /* ── API helpers ──────────────────────────────────────────────────────── */
@@ -112,20 +121,38 @@ function getPostText(textP) {
 
 function findActionBars() {
   const bars = new Set();
-  const selectors = [
+
+  // Strategy 1: Legacy inline SVG IDs & use tags (older desktop UI)
+  const svgSelectors = [
     'svg[id="comment-small"], svg[id="repost-small"], svg[id="send-privately-small"]',
     'use[href="#comment-small"], use[href="#repost-small"], use[href="#send-privately-small"]',
   ];
-  for (const el of document.querySelectorAll(selectors.join(", "))) {
+  for (const el of document.querySelectorAll(svgSelectors.join(", "))) {
     const btn = el.closest("button");
     if (!btn) continue;
     const bar = btn.closest('.feed-shared-social-action-bar') || btn.parentElement;
     if (bar) bars.add(bar);
   }
+
+  // Strategy 2: Legacy .feed-shared-social-action-bar class
+  for (const bar of document.querySelectorAll('.feed-shared-social-action-bar')) {
+    bars.add(bar);
+  }
+
+  // Strategy 3: New LinkedIn UI — social-action-bar inside article cards
+  for (const bar of document.querySelectorAll('article.main-feed-activity-card .social-action-bar')) {
+    bars.add(bar);
+  }
+
   return [...bars];
 }
 
 function findPostCard(bar) {
+  // New UI: article-based main-feed-activity-card
+  const article = bar.closest('article.main-feed-activity-card');
+  if (article) return article;
+
+  // Legacy: walk up from bar to find a container with post text
   let el = bar.parentElement;
   while (el && el !== document.body) {
     if (el.querySelector(TEXT_SEL)) return el;
@@ -136,11 +163,12 @@ function findPostCard(bar) {
 
 /* ── Scroll anchoring ───────────────────────────────────────────────── */
 
-function anchorScroll(btn) {
-  const rect = btn.getBoundingClientRect();
+// Tracks a normal-flow element to counteract scroll jumps when content is inserted above it.
+function anchorScroll(el) {
+  const rect = el.getBoundingClientRect();
   const y = rect.top + window.scrollY;
   return () => {
-    const after = btn.getBoundingClientRect();
+    const after = el.getBoundingClientRect();
     window.scrollBy(0, after.top + window.scrollY - y);
   };
 }
@@ -372,7 +400,7 @@ function showInlinePrompt(post, actionBar, btn) {
 /* ── Main handler ───────────────────────────────────────────────────── */
 
 async function handleUnfilter(btn, post, actionBar, text) {
-  const fix = anchorScroll(btn);
+  const fix = anchorScroll(post);
 
   const provider = await getActiveProvider();
 
