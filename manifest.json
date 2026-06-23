@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Unfiltered",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "See what people actually mean on LinkedIn",
   "browser_specific_settings": {
     "gecko": {
