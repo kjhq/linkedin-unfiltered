@@ -8,9 +8,9 @@ chrome extension that translates linkedin posts into what people actually mean.
 
 ---
 
-### what it does
+## what it does
 
-scroll linkedin, see a post full of corporate buzzwords and engagement bait, hit **unfilter**. an ai translates it into honest, blunt text. for entertainment only.
+scroll linkedin, see corporate buzzwords and engagement bait, hit **unfilter**. an ai translates it into honest, blunt text. for entertainment only.
 
 features:
 - **instant translate** — one click on any post
@@ -21,7 +21,7 @@ features:
 
 ---
 
-### in action
+## in action
 
 | before | after |
 |--------|-------|
@@ -29,11 +29,11 @@ features:
 
 ---
 
-### install
+## install
 
 **firefox** → [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/linkedin-unfiltered/)
 
-**chrome** → download the `chrome.zip` from the [latest release](https://github.com/kjhq/linkedin-unfiltered/releases), then:
+**chrome** → download `chrome.zip` from the [latest release](https://github.com/kjhq/linkedin-unfiltered/releases), then:
 
 1. open `chrome://extensions`
 2. enable **developer mode**
@@ -41,7 +41,7 @@ features:
 
 ---
 
-### setup
+## setup
 
 1. click the extension icon → open settings
 2. add your api key (mistral / openrouter / any openai-compatible provider)
@@ -50,24 +50,26 @@ features:
 
 ---
 
-### stack
+## stack
 
-![JavaScript](https://img.shields.io/badge/javascript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
-![CSS](https://img.shields.io/badge/css-1572B6?style=flat-square&logo=css3&logoColor=white)
+![javascript](https://img.shields.io/badge/javascript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+![css](https://img.shields.io/badge/css-1572B6?style=flat-square&logo=css3&logoColor=white)
 
 no build step. vanilla js, manifest v3, chrome storage api.
 
+`javascript` `chrome extension` `ai`
+
 ---
 
-### privacy
+## privacy
 
-- your api key stays in browser local storage — never leaves your device
-- post content is sent directly to the ai provider you configure
+- api key stays in browser local storage — never leaves your device
+- post content sent directly to the ai provider you configure
 - nothing logged, nothing tracked, nothing sold
 
 ---
 
-### license
+## license
 
 [mit](LICENSE)
 
