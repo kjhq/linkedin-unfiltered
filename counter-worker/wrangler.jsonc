@@ -3,8 +3,13 @@
   "name": "linkedin-unfiltered-api",
   "main": "src/index.js",
   "compatibility_date": "2026-07-17",
-  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "kv_namespaces": [
+    {
+      "binding": "COUNTER",
+      "id": "db53c5d41611475a87bb87c29c8d3163"
+    }
+  ],
   "routes": [
     { "pattern": "api.kjhq.dev/*", "zone_name": "kjhq.dev" },
     { "pattern": "api.kjhq.dev", "zone_name": "kjhq.dev" }

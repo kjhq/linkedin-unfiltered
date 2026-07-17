@@ -23,27 +23,6 @@ function isCountPath(pathname) {
   )
 }
 
-async function upstash(env, command) {
-  const url = env.UPSTASH_REDIS_REST_URL
-  const token = env.UPSTASH_REDIS_REST_TOKEN
-  if (!url || !token) {
-    throw new Error('Missing Upstash secrets')
-  }
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(command),
-  })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Upstash ${res.status}: ${text}`)
-  }
-  return res.json()
-}
-
 export default {
   async fetch(request, env) {
     try {
@@ -58,15 +37,16 @@ export default {
       }
 
       if (request.method === 'GET') {
-        const result = await upstash(env, ['GET', 'globalCount'])
-        const globalCount = result.result == null ? 0 : Number(result.result)
+        const raw = await env.COUNTER.get('globalCount')
+        const globalCount = raw == null ? 0 : Number(raw)
         return json({ globalCount })
       }
 
       if (request.method === 'POST') {
-        const result = await upstash(env, ['INCR', 'globalCount'])
-        const globalCount = Number(result.result)
-        return json({ globalCount })
+        const raw = await env.COUNTER.get('globalCount')
+        const next = (raw == null ? 0 : Number(raw)) + 1
+        await env.COUNTER.put('globalCount', String(next))
+        return json({ globalCount: next })
       }
 
       return new Response(null, { status: 405, headers: corsHeaders })
